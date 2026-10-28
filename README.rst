@@ -212,6 +212,7 @@ Changelog:
 =====================
   - Fixed bug in get_ffi [#19]
   - Fixed missing comments in fits header [#21]
+  - Using a lazy getter for `lkspacecraft` when calling `TESSCube.get_timecorr` and enabling `TEST_MODE` and `OFFLINE_MODE`.
 
 1.2.1
 ======

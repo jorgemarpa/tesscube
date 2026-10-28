@@ -18,12 +18,78 @@ from .fits import (
 from .query import QueryMixin, async_get_ffi, get_last_hdu, get_primary_hdu
 from .utils import _sync_call, validate_tuple
 from .wcs import WCSMixin, WCS_ATTRS
-from lkspacecraft import TESSSpacecraft
-import warnings
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    ts = TESSSpacecraft()
+_spacecraft = None
+
+
+def get_spacecraft():
+    """
+    Lazily import lkspacecraft and return a cached TESSSpacecraft instance.
+
+    Checks environment variables:
+    - LKSPACECRAFT_TEST_MODE: enables test mode on lkspacecraft.
+    - LKSPACECRAFT_OFFLINE_MODE: enables offline mode on lkspacecraft.
+    """
+    global _spacecraft
+    if _spacecraft is None:
+        import os
+        import warnings
+        import lkspacecraft
+
+        if os.getenv("LKSPACECRAFT_TEST_MODE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        ):
+            if hasattr(lkspacecraft, "enable_test_mode"):
+                lkspacecraft.enable_test_mode()
+
+        if os.getenv("LKSPACECRAFT_OFFLINE_MODE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        ):
+            if hasattr(lkspacecraft, "enable_offline_mode"):
+                lkspacecraft.enable_offline_mode()
+            elif hasattr(lkspacecraft, "enable_test_mode"):
+                lkspacecraft.enable_test_mode()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _spacecraft = lkspacecraft.TESSSpacecraft()
+    return _spacecraft
+
+
+def get_spacecraft():
+    """
+    Lazily import lkspacecraft and return a cached TESSSpacecraft instance.
+
+    Checks environment variables:
+    - LKSPACECRAFT_TEST_MODE: enables test mode on lkspacecraft.
+    - LKSPACECRAFT_OFFLINE_MODE: enables offline mode on lkspacecraft.
+    """
+    global _spacecraft
+    if _spacecraft is None:
+        import os
+        import warnings
+        import lkspacecraft
+
+        if os.getenv("LKSPACECRAFT_TEST_MODE", "").lower() in ("1", "true", "yes", "on"):
+            if hasattr(lkspacecraft, "enable_test_mode"):
+                lkspacecraft.enable_test_mode()
+
+        if os.getenv("LKSPACECRAFT_OFFLINE_MODE", "").lower() in ("1", "true", "yes", "on"):
+            if hasattr(lkspacecraft, "enable_offline_mode"):
+                lkspacecraft.enable_offline_mode()
+            elif hasattr(lkspacecraft, "enable_test_mode"):
+                lkspacecraft.enable_test_mode()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _spacecraft = lkspacecraft.TESSSpacecraft()
+    return _spacecraft
 
 
 class TESSCube(QueryMixin, WCSMixin):
@@ -527,6 +593,7 @@ class TESSCube(QueryMixin, WCSMixin):
         if not self.tica:
             # return self.last_hdu.data["BARYCORR"]
             # Barycentric Time Correction in seconds
+            ts = get_spacecraft()
             tc = ts.get_barycentric_time_correction(
                 time=self.time - self.last_hdu.data["BARYCORR"] + ts.time_offset,
                 ra=ra,
